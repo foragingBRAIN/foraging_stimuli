@@ -39,13 +39,11 @@ I = NaN([stimsize,3]);
 
 while 1
     
-    phi = rand(stimsize);
-    
     tempSpectrum = (randn(stimsize) + 1i*randn(stimsize)) .* sqrt(S_f);
     compSpectrum = invk.*compSpectrum + sqrt(1-invk.^2).*tempSpectrum;
 
     Xmat = ifft2(compSpectrum);
-%     Xmat = angle(Xmat + colvar*exp(1i*colmean));
+    Xmat = angle(Xmat + colvar*exp(1i*colmean));
 %     Xgray = angle(Xgray + E.stimConcentration.*exp(1i.*(-0.5*pi+0.5*lambdaVec(frameNum)*pi)));
     
     Xmat = 0.5.*Xmat./pi + (Xmat<=0);
