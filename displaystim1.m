@@ -1,10 +1,8 @@
 
 
-
-stimsize = [600,600];
-
 %% pink noise texture params
 % spatial spectrum
+stimsize = [600,600];
 beta = -2;
 
 u = [(0:floor(stimsize(1)/2)) -(ceil(stimsize(1)/2)-1:-1:1)]'/stimsize(1);
@@ -25,13 +23,18 @@ invk(isinf(invk)) = 0;
 %% compute clut
 L = foraging_clut;
 
+try
+	load('foraging_onebutton_calibration.mat')
+    Screen('LoadNormalizedGammaTable', num, lutinv);
+catch
+    error('No calibration file found')
+end
+
 
 %% stim params
-colmean = -0.25*pi;
 colvar = 0.02;
-colsat = 25;                % saturation (ratio max gamut for this monitor)
-collum = 100;               % fraction luminance at 45deg viewing angle
-
+colmax = -3*pi/4;
+colmin = 0;
 
 
 compSpectrum = (randn(stimsize) + 1i*randn(stimsize)) .* sqrt(S_f);
@@ -39,21 +42,19 @@ I = NaN([stimsize,3]);
 
 while 1
     
-    phi = rand(stimsize);
+    colmean = colmin+lambda*(colmax-colmin);
     
     tempSpectrum = (randn(stimsize) + 1i*randn(stimsize)) .* sqrt(S_f);
     compSpectrum = invk.*compSpectrum + sqrt(1-invk.^2).*tempSpectrum;
 
     Xmat = ifft2(compSpectrum);
-%     Xmat = angle(Xmat + colvar*exp(1i*colmean));
-%     Xgray = angle(Xgray + E.stimConcentration.*exp(1i.*(-0.5*pi+0.5*lambdaVec(frameNum)*pi)));
-    
+    Xmat = angle(Xmat + colvar*exp(1i*colmean));
     Xmat = 0.5.*Xmat./pi + (Xmat<=0);
 
     for cc=1:3
         I(:,:,cc) = reshape(L.Xrgb(cc,ceil(Xmat*L.clutpoints)),stimsize);
     end
-    stimTex = Screen('MakeTexture', W.n, stimPatch);
+    stimTex = Screen('MakeTexture', num, I);
     
 end
 
