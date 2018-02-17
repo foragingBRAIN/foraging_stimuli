@@ -28,11 +28,12 @@ u = repmat(u,1,stimsize(2));
 v = [(0:floor(stimsize(2)/2)) -(ceil(stimsize(2)/2)-1:-1:1)]/stimsize(2);
 v = repmat(v,stimsize(1),1);
 
+
 S_f = (u.^2 + v.^2).^(betaTex/2); 
 S_f(S_f==inf) = 0;
 
 % temporal weighting
-speedchange = 20;
+speedchange = 10;
 k = sqrt(u.^2 + v.^2);
 invk = exp(-k.*speedchange);
 invk(isinf(invk)) = 0;
@@ -90,22 +91,22 @@ I = NaN([stimsize,3]);
     
 for ww=1:3
     compSpectrum(:,:,ww) = (randn(stimsize) + 1i*randn(stimsize)) .* sqrt(S_f);
+    Xmat = ifft2(compSpectrum(:,:,ww));
+    Xmat = angle(Xmat + colconc*exp(1i*colmin));
+    Xmat = 0.5.*Xmat./pi + (Xmat<=0);
+    for cc=1:3
+        I(:,:,cc) = reshape(L.Xrgb(cc,ceil(Xmat*L.clutpoints)),stimsize);
+    end
+    stimtex{ww} = Screen('Maketexture', stimwin(ww), I);
 end
+
 
 while 1
     
     for ww=1:3
         
         [mousex,mousey] = GetMouse;
-%         if (mousex<resMon.width)
-%             mousex = resMon.width+1;
-%         end
-%         if (mousey>winsize(1))
-%             mousey = winsize(1);
-%         end
-%         SetMouse(mousex,mousey);
         cursorMon = ceil((mousex-1920)/1024);
-        
         
         colmean = colmin+currLambda(ww)*(colmax-colmin);
         
@@ -122,7 +123,9 @@ while 1
         for cc=1:3
             I(:,:,cc) = reshape(L.Xrgb(cc,ceil(Xmat*L.clutpoints)),stimsize);
         end
+        
         % make textures
+        Screen('Close', stimtex{ww});
         stimtex{ww} = Screen('Maketexture', stimwin(ww), I);
 
         % flip stim
@@ -134,17 +137,18 @@ while 1
             Screen('DrawDots', stimwin(ww), [mousex-1920-(cursorMon-1)*winsize(2),mousey], 50, 0, [], 2);
         end
         vbl(ww) = Screen('Flip', stimwin(ww), vbl(ww)+0.75/60);
-        vbllist(ff,ww) = vbl(ww);
         
-        Screen('DrawTexture', supwin, stimtex{ww}, [], [(ww-1)*resSup.width/3,0,(ww)*resSup.width/3,winsize(1)*supFactor]);
-        if currAvail(ww)
-            Screen('FillOval', supwin, 0, [(ww-0.5)*resSup.width/3-disksize*supFactor,(0.5*winsize(1)-disksize)*supFactor,(ww-0.5)*resSup.width/3+disksize*supFactor,(0.5*winsize(1)+disksize)*supFactor]);
+        for ww2=1:3
+            Screen('DrawTexture', supwin, stimtex{ww2}, [], [(ww2-1)*resSup.width/3,0,(ww2)*resSup.width/3,winsize(1)*supFactor]);
+            if currAvail(ww2)
+                Screen('FillOval', supwin, 0, [(ww2-0.5)*resSup.width/3-disksize*supFactor,(0.5*winsize(1)-disksize)*supFactor,(ww2-0.5)*resSup.width/3+disksize*supFactor,(0.5*winsize(1)+disksize)*supFactor]);
+            end
+            if displaycursor
+                Screen('DrawDots', supwin, [mousex-1920,mousey]*(resSup.width/3)/winsize(2), 50/3, 0, [], 2);
+            end
+            Screen('FrameRect', supwin, 0, [(ww2-1)*resSup.width/3,0,ww2*resSup.width/3,winsize(1)*(resSup.width/3)/winsize(2)], 2);
         end
-        if displaycursor
-            Screen('DrawDots', supwin, [mousex-1920,mousey]*(resSup.width/3)/winsize(2), 50/3, 0, [], 2);
-        end
-        Screen('FrameRect', supwin, 0, [(ww-1)*resSup.width/3,0,ww*resSup.width/3,winsize(1)*(resSup.width/3)/winsize(2)], 2);
-        
+        vbl0 = Screen('Flip', supwin, vbl0+0.75/60);
         
         % check display pipe
         if exist(sprintf('%s%s.txt',pipedir,pipedisplay),'file')
@@ -187,28 +191,23 @@ while 1
             isClicked = 0;
         end
         
-        % check keyboard input
-        [keyPress,~,keyCode] = KbCheck;
-        if keyPress
-            if ~keyWasDown
-                if keyCode(KbName('esc'))
-                    break
-                elseif keyCode(KbName('space'))
-                    displaycursor = 1-displaycursor;
-                end 
-            end
-            keyWasDown = 1;
-        else
-            keyWasDown = 0;
-        end
-        
     end
     
-    vbl0 = Screen('Flip', supwin, vbl0+2.75/60);
-    for ww=1:3
-        Screen('Close', stimtex{ww});
+    % check keyboard input
+    [keyPress,~,keyCode] = KbCheck;
+    if keyPress
+        if ~keyWasDown
+            if keyCode(KbName('esc'))
+                break
+            elseif keyCode(KbName('space'))
+                displaycursor = 1-displaycursor;
+            end 
+        end
+        keyWasDown = 1;
+    else
+        keyWasDown = 0;
     end
-
+    
 end
 
 
